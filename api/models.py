@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-
+import uuid
 class Courts(models.Model):
     court_id = models.AutoField(primary_key=True)
     court_name = models.CharField(max_length=100)
@@ -34,7 +34,8 @@ class Schedule(models.Model):
 class Booking(models.Model):
     HOUR_CHOICES = [(i, f"{i:02d}:00") for i in range(9, 19)]
 
-    booking_id = models.AutoField(primary_key=True)
+    # booking_id = models.AutoField(primary_key=True)
+    booking_id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
     booking_date = models.DateField()
     booking_time = models.IntegerField(
@@ -51,7 +52,7 @@ class Booking(models.Model):
         unique_together = ['schedule', 'booking_date', 'booking_time']
 
     def __str__(self):
-        return f"Booking {self.booking_id} - {self.name} {self.surname} - {self.schedule.court.court_name} - {self.booking_date} {self.get_booking_time_display()}"
+        return f"Booking {self.booking_id.hex[:8]} - {self.name} {self.surname} - {self.schedule.court.court_name} - {self.booking_date} {self.get_booking_time_display()}"
 
     def clean(self):
         from django.core.exceptions import ValidationError
