@@ -23,6 +23,7 @@ class BookingSerializer(serializers.ModelSerializer):
     court_name = serializers.CharField(source='schedule.court.court_name', read_only=True)
     court_type = serializers.CharField(source='schedule.court.court_type', read_only=True)
     court_image_url = serializers.URLField(source='schedule.court.image_url', read_only=True)
+    booking_time = serializers.CharField(source='schedule.time_slot', read_only=True)
 
     class Meta:
         model = Booking
