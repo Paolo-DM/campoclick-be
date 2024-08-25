@@ -8,29 +8,9 @@ from .serializer import (
     ScheduleSerializer,
     BookingSerializer,
 )
-from django.core.management.base import BaseCommand
-from decimal import Decimal
 
-def populate_schedules():
-    courts = Courts.objects.all()
-    
-    for court in courts:
-        for hour in range(9, 19):  # 9 AM to 6 PM
-            price = Decimal('20.00')  # Base price
-            
-            # Adjust price for peak hours (11 AM to 2 PM)
-            if 11 <= hour <= 14:
-                price = Decimal('25.00')
-            
-            Schedule.objects.get_or_create(
-                court=court,
-                time_slot=hour,
-                defaults={'price': price, 'is_available': True}
-            )
-    
-    print("Schedules populated successfully!")
 
-# Endpoint per i campi sportivi
+# ********** CAMPI SPORTIVI **********
 
 
 # Recupera tutti i campi sportivi
@@ -39,7 +19,6 @@ def get_courts(request):
     # Se viene passato un parametro sport (es: "/courts?sport=tennis"), filtra i campi sportivi per court_type
     sport = request.query_params.get("sport", None)
     if sport:
-        print("SPORT if", sport)
         courts = Courts.objects.filter(
             court_type__iexact=sport
         )  # __iexact per non distinguere tra maiuscole e minuscole
@@ -67,10 +46,12 @@ def court_detail(request, pk):
     except Courts.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+    # Recupera i dettagli di un campo sportivo
     if request.method == "GET":
         serializer = CourtsSerializer(court)
         return Response(serializer.data)
 
+    # Aggiorna i dettagli di un campo sportivo
     elif request.method == "PUT":
         serializer = CourtsSerializer(court, data=request.data)
         if serializer.is_valid():
@@ -78,22 +59,30 @@ def court_detail(request, pk):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # Cancella un campo sportivo
     elif request.method == "DELETE":
         court.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# Endpoint per gli orari
+# ********** ORARI **********
 
 
 @api_view(["GET"])
 def get_schedules(request):
-    # Recupera tutti gli orari
     court_id = request.query_params.get("court_id", None)
+    date = request.query_params.get("date", None)
+
+    schedules = Schedule.objects.all()
+
+    # Filtra le schedules per court_id se specificato
     if court_id:
-        schedules = Schedule.objects.filter(court_id=court_id)
-    else:
-        schedules = Schedule.objects.all()
+        schedules = schedules.filter(court_id=court_id)
+
+    if date:
+        # Filtra le schedules disponibili per la data specificata
+        schedules = [schedule for schedule in schedules if schedule.is_available(date)]
+
     serializer = ScheduleSerializer(schedules, many=True)
     return Response(serializer.data)
 
@@ -112,14 +101,16 @@ def create_schedule(request):
 def schedule_detail(request, pk):
     # Gestisce le operazioni di dettaglio per un singolo orario
     try:
-        schedule = Schedule.objects.get(pk=pk)
+        schedule = Schedule.objects.get(pk=pk)  # Recupera una schedule specifica
     except Schedule.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+    # Recupera i dettagli di una schedule
     if request.method == "GET":
         serializer = ScheduleSerializer(schedule)
         return Response(serializer.data)
 
+    # Aggiorna i dettagli di una schedule
     elif request.method == "PUT":
         serializer = ScheduleSerializer(schedule, data=request.data)
         if serializer.is_valid():
@@ -127,12 +118,13 @@ def schedule_detail(request, pk):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # Cancella una schedule
     elif request.method == "DELETE":
         schedule.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# Endpoint per le prenotazioni
+# ********** PRENOTAZIONI **********
 
 
 @api_view(["GET"])
@@ -160,11 +152,13 @@ def booking_detail(request, pk):
         booking = Booking.objects.get(pk=pk)
     except Booking.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
+    # Recupera i dettagli di una prenotazione
     if request.method == "GET":
         serializer = BookingSerializer(booking)
         return Response(serializer.data)
-    
+
+    # Aggiorna i dettagli di una prenotazione
     elif request.method == "PUT":
         serializer = BookingSerializer(booking, data=request.data)
         if serializer.is_valid():
@@ -174,7 +168,8 @@ def booking_detail(request, pk):
             except ValidationError as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    # Cancella una prenotazione
     elif request.method == "DELETE":
         booking.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
