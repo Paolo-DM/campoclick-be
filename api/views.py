@@ -1,6 +1,7 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from django.core.exceptions import ValidationError
 from .models import Courts, Schedule, Booking
 from .serializer import (
@@ -136,6 +137,7 @@ def get_bookings(request):
 
 
 @api_view(["POST"])
+@permission_classes([AllowAny]) # Permette anche a chi non è autenticato di creare una prenotazione
 def create_booking(request):
     # Crea una nuova prenotazione
     serializer = BookingSerializer(data=request.data)
